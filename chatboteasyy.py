@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import json
 import os
 import logging
+from fastapi.middleware.cors import CORSMiddleware  # Import pro CORS
 from rapidfuzz import process, fuzz
 
 app = FastAPI()
@@ -9,6 +10,20 @@ app = FastAPI()
 # Nastavení logování
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
+
+# Povolení CORS
+origins = [
+    "http://dotazy.wz.cz",  # Povolte doménu, odkud budou přicházet požadavky
+    "https://dotazy.wz.cz",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # povolte uvedené domény
+    allow_credentials=True,
+    allow_methods=["*"],  # Povolit všechny metody (GET, POST, atd.)
+    allow_headers=["*"],  # Povolit všechny hlavičky
+)
 
 # Cesta k JSON souboru (pro Render)
 json_path = "Chatbot_zdroj.json"
@@ -58,7 +73,7 @@ def chatbot(query: str):
     else:
         logging.info("❌ Nenalezena žádná shoda.")
 
-    if best_match and best_match[1] > 85:  # Snížený práh pro shodu
+    if best_match and best_match[1] > 76:  # Snížený práh pro shodu
         index = questions.index(best_match[0])
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
