@@ -58,7 +58,7 @@ def chatbot(query: str):
     else:
         logging.info("❌ Nenalezena žádná shoda.")
 
-    if best_match and best_match[1] > 70:  # Snížený práh pro shodu
+    if best_match and best_match[1] > 85:  # Snížený práh pro shodu
         index = questions.index(best_match[0])
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
