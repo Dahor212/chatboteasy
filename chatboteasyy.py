@@ -6,7 +6,7 @@ import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 from github import Github
-from io import StringIO
+from io import BytesIO, StringIO
 
 app = FastAPI()
 
@@ -115,7 +115,7 @@ def save_to_csv(question, answer):
 
         # Uložení do nového souboru
         with BytesIO() as output:
-            df.to_csv(output, index=False)
+            df.to_csv(output, index=False, sep=',', header=True)  # Ujistíme se, že používáme čárky jako oddělovače
             output.seek(0)
             repo.update_file(CSV_FILE_PATH, "Add new question and answer", output.read(), file.sha)
 
