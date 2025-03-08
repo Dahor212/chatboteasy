@@ -31,11 +31,14 @@ app.add_middleware(
 # GitHub API token a repo informace (token načítáme z environmentální proměnné)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token načtený z prostředí
 REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
-EXCEL_FILE_PATH = 'https://github.com/Dahor212/chatboteasy/blob/main/chat_data.xlsx'  # Cesta k souboru na GitHubu
+EXCEL_FILE_PATH = 'chat_data.xlsx'  # Cesta k souboru na GitHubu (bez URL, pouze cesta k souboru v repozitáři)
 
 # Nastavení připojení k GitHubu
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo(REPO_NAME)
+
+# Logujeme připojení k repozitáři
+logging.info(f"📦 Připojeno k repozitáři: {REPO_NAME}")
 
 # Cesta k JSON souboru (pro Render)
 json_path = "Chatbot_zdroj.json"
@@ -94,12 +97,18 @@ def chatbot(query: str):
 # Funkce pro uložení do Excelu na GitHub
 def save_to_excel(question, answer):
     try:
+        # Log pro začátek pokusu o získání souboru z GitHubu
+        logging.info(f"📝 Pokus o načtení souboru Excelu z GitHubu: {EXCEL_FILE_PATH}")
+        
         # Stáhnutí souboru z GitHubu
         file = repo.get_contents(EXCEL_FILE_PATH)
         content = file.decoded_content.decode("utf-8")
 
         # Přečtěte existující data do DataFrame
         df = pd.read_excel(StringIO(content))
+
+        # Log pro úspěšné načtení Excelu
+        logging.info("✅ Soubor Excel úspěšně načten z GitHubu")
 
         # Přidání nového záznamu
         new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
@@ -115,3 +124,4 @@ def save_to_excel(question, answer):
         logging.info(f"✅ Úspěšně uloženo do Excelu na GitHub: {EXCEL_FILE_PATH}")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání do Excelu na GitHubu: {str(e)}")
+        logging.debug(f"🔍 Detailní chybová zpráva: {e}")
