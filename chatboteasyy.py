@@ -3,7 +3,7 @@ import json
 import os
 import logging
 import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware  # Import pro CORS
 from rapidfuzz import process, fuzz
 
 app = FastAPI()
@@ -20,17 +20,16 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # povolte uvedené domény
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Povolit všechny metody (GET, POST, atd.)
+    allow_headers=["*"],  # Povolit všechny hlavičky
 )
 
-# Cesta k souboru s otázkami/odpověďmi a k Excel souboru
+# Cesta k JSON souboru (pro Render)
 json_path = "Chatbot_zdroj.json"
-excel_path = "chat_data.xlsx"
 
-# Načtení existujících otázek z JSON souboru
+# Ověření, zda soubor existuje a načtení dat
 faq_data = []
 if os.path.exists(json_path):
     try:
@@ -45,18 +44,10 @@ else:
 # Seznam otázek pro vyhledávání
 questions = [item["question"] for item in faq_data] if faq_data else []
 
-# Funkce pro uložení otázek a odpovědí do Excel souboru
-def save_to_excel(question, answer):
-    if os.path.exists(excel_path):
-        df = pd.read_excel(excel_path)
-    else:
-        df = pd.DataFrame(columns=['Question', 'Answer'])
-
-    # Přidání nové řádky
-    df = df.append({'Question': question, 'Answer': answer}, ignore_index=True)
-
-    # Uložení zpět do Excelu
-    df.to_excel(excel_path, index=False)
+# Testovací výpis prvních 5 záznamů
+logging.info("🔍 Prvních 5 otázek v databázi:")
+for item in faq_data[:5]:
+    logging.info(f"Q: {item['question']} -> A: {item['answer']}")
 
 @app.on_event("startup")
 def startup_event():
@@ -88,10 +79,30 @@ def chatbot(query: str):
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
         
-        # Uložení otázky a odpovědi do Excelu
+        # Uložení dotazu a odpovědi do Excelu
         save_to_excel(query, answer)
         
         return {"answer": answer}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
         return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
+
+# Funkce pro uložení do Excelu
+def save_to_excel(question, answer):
+    excel_path = 'chatbot_data.xlsx'  # Cesta k vašemu Excel souboru
+    
+    # Zkontrolujte, zda soubor existuje
+    if os.path.exists(excel_path):
+        df = pd.read_excel(excel_path)
+    else:
+        # Pokud neexistuje, vytvořte nový DataFrame
+        df = pd.DataFrame(columns=["Question", "Answer"])
+    
+    # Přidání nového záznamu
+    new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
+    
+    # Použijte concat() pro přidání nového řádku
+    df = pd.concat([df, new_row], ignore_index=True)
+
+    # Uložení DataFrame zpět do Excelu
+    df.to_excel(excel_path, index=False)
