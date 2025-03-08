@@ -104,11 +104,10 @@ def save_to_excel(question, answer):
         file = repo.get_contents(EXCEL_FILE_PATH)
         content = file.decoded_content.decode("utf-8")
 
+        logging.info("✅ Excel soubor úspěšně načten.")
+
         # Přečtěte existující data do DataFrame
         df = pd.read_excel(StringIO(content))
-
-        # Log pro úspěšné načtení Excelu
-        logging.info("✅ Soubor Excel úspěšně načten z GitHubu")
 
         # Přidání nového záznamu
         new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
@@ -118,7 +117,6 @@ def save_to_excel(question, answer):
         with BytesIO() as output:
             df.to_excel(output, index=False)
             output.seek(0)
-            # Přejeďte soubor zpět na GitHub
             repo.update_file(EXCEL_FILE_PATH, "Add new question and answer", output.read(), file.sha)
 
         logging.info(f"✅ Úspěšně uloženo do Excelu na GitHub: {EXCEL_FILE_PATH}")
