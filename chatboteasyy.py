@@ -91,18 +91,22 @@ def chatbot(query: str):
 def save_to_excel(question, answer):
     excel_path = 'chatbot_data.xlsx'  # Cesta k vašemu Excel souboru
     
-    # Zkontrolujte, zda soubor existuje
-    if os.path.exists(excel_path):
-        df = pd.read_excel(excel_path)
-    else:
-        # Pokud neexistuje, vytvořte nový DataFrame
-        df = pd.DataFrame(columns=["Question", "Answer"])
-    
-    # Přidání nového záznamu
-    new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
-    
-    # Použijte concat() pro přidání nového řádku
-    df = pd.concat([df, new_row], ignore_index=True)
+    try:
+        # Zkontrolujte, zda soubor existuje
+        if os.path.exists(excel_path):
+            df = pd.read_excel(excel_path)
+        else:
+            # Pokud neexistuje, vytvořte nový DataFrame
+            df = pd.DataFrame(columns=["Question", "Answer"])
+        
+        # Přidání nového záznamu
+        new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
+        
+        # Použijte concat() pro přidání nového řádku
+        df = pd.concat([df, new_row], ignore_index=True)
 
-    # Uložení DataFrame zpět do Excelu
-    df.to_excel(excel_path, index=False)
+        # Uložení DataFrame zpět do Excelu
+        df.to_excel(excel_path, index=False)
+        logging.info(f"✅ Úspěšně uloženo do Excelu: {excel_path}")
+    except Exception as e:
+        logging.error(f"❌ Chyba při ukládání do Excelu: {str(e)}")
