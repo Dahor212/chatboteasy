@@ -31,7 +31,7 @@ app.add_middleware(
 # GitHub API token a repo informace (token načítáme z environmentální proměnné)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token načtený z prostředí
 REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
-EXCEL_FILE_PATH = 'chat_data.xlsx'  # Cesta k souboru na GitHubu
+EXCEL_FILE_PATH = 'https://github.com/Dahor212/chatboteasy/blob/main/chat_data.xlsx'  # Cesta k souboru na GitHubu
 
 # Nastavení připojení k GitHubu
 g = Github(GITHUB_TOKEN)
