@@ -2,7 +2,8 @@ from fastapi import FastAPI
 import json
 import os
 import logging
-from fastapi.middleware.cors import CORSMiddleware  # Import pro CORS
+import pandas as pd
+from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 
 app = FastAPI()
@@ -19,16 +20,17 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # povolte uvedené domény
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Povolit všechny metody (GET, POST, atd.)
-    allow_headers=["*"],  # Povolit všechny hlavičky
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Cesta k JSON souboru (pro Render)
+# Cesta k souboru s otázkami/odpověďmi a k Excel souboru
 json_path = "Chatbot_zdroj.json"
+excel_path = "chat_data.xlsx"
 
-# Ověření, zda soubor existuje a načtení dat
+# Načtení existujících otázek z JSON souboru
 faq_data = []
 if os.path.exists(json_path):
     try:
@@ -43,10 +45,18 @@ else:
 # Seznam otázek pro vyhledávání
 questions = [item["question"] for item in faq_data] if faq_data else []
 
-# Testovací výpis prvních 5 záznamů
-logging.info("🔍 Prvních 5 otázek v databázi:")
-for item in faq_data[:5]:
-    logging.info(f"Q: {item['question']} -> A: {item['answer']}")
+# Funkce pro uložení otázek a odpovědí do Excel souboru
+def save_to_excel(question, answer):
+    if os.path.exists(excel_path):
+        df = pd.read_excel(excel_path)
+    else:
+        df = pd.DataFrame(columns=['Question', 'Answer'])
+
+    # Přidání nové řádky
+    df = df.append({'Question': question, 'Answer': answer}, ignore_index=True)
+
+    # Uložení zpět do Excelu
+    df.to_excel(excel_path, index=False)
 
 @app.on_event("startup")
 def startup_event():
@@ -77,6 +87,10 @@ def chatbot(query: str):
         index = questions.index(best_match[0])
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
+        
+        # Uložení otázky a odpovědi do Excelu
+        save_to_excel(query, answer)
+        
         return {"answer": answer}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
