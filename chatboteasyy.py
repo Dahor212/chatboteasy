@@ -6,6 +6,7 @@ import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 from github import Github
+from io import BytesIO, StringIO
 
 app = FastAPI()
 
@@ -27,8 +28,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# GitHub API token a repo informace
-GITHUB_TOKEN = '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'  # Zde vložte svůj GitHub token
+# GitHub API token a repo informace (token načítáme z environmentální proměnné)
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token načtený z prostředí
 REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
 EXCEL_FILE_PATH = 'chat_data.xlsx'  # Cesta k souboru na GitHubu
 
@@ -98,7 +99,6 @@ def save_to_excel(question, answer):
         content = file.decoded_content.decode("utf-8")
 
         # Přečtěte existující data do DataFrame
-        from io import StringIO
         df = pd.read_excel(StringIO(content))
 
         # Přidání nového záznamu
@@ -106,7 +106,6 @@ def save_to_excel(question, answer):
         df = pd.concat([df, new_row], ignore_index=True)
 
         # Uložení do nového souboru
-        from io import BytesIO
         with BytesIO() as output:
             df.to_excel(output, index=False)
             output.seek(0)
