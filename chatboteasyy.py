@@ -3,8 +3,9 @@ import json
 import os
 import logging
 import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware  # Import pro CORS
+from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
+from github import Github
 
 app = FastAPI()
 
@@ -14,22 +15,29 @@ logging.info("🚀 Spuštění aplikace")
 
 # Povolení CORS
 origins = [
-    "http://dotazy.wz.cz",  # Povolte doménu, odkud budou přicházet požadavky
+    "http://dotazy.wz.cz",
     "https://dotazy.wz.cz",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # povolte uvedené domény
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Povolit všechny metody (GET, POST, atd.)
-    allow_headers=["*"],  # Povolit všechny hlavičky
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# GitHub API token a repo informace
+GITHUB_TOKEN = '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'  # Zde vložte svůj GitHub token
+REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
+EXCEL_FILE_PATH = 'chat_data.xlsx'  # Cesta k souboru na GitHubu
+
+# Nastavení připojení k GitHubu
+g = Github(GITHUB_TOKEN)
+repo = g.get_repo(REPO_NAME)
 
 # Cesta k JSON souboru (pro Render)
 json_path = "Chatbot_zdroj.json"
-
-# Ověření, zda soubor existuje a načtení dat
 faq_data = []
 if os.path.exists(json_path):
     try:
@@ -41,13 +49,7 @@ if os.path.exists(json_path):
 else:
     logging.error(f"⚠️ Chyba: Soubor {json_path} nebyl nalezen!")
 
-# Seznam otázek pro vyhledávání
 questions = [item["question"] for item in faq_data] if faq_data else []
-
-# Testovací výpis prvních 5 záznamů
-logging.info("🔍 Prvních 5 otázek v databázi:")
-for item in faq_data[:5]:
-    logging.info(f"Q: {item['question']} -> A: {item['answer']}")
 
 @app.on_event("startup")
 def startup_event():
@@ -79,34 +81,38 @@ def chatbot(query: str):
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
         
-        # Uložení dotazu a odpovědi do Excelu
+        # Uložení dotazu a odpovědi do Excelu na GitHub
         save_to_excel(query, answer)
         
         return {"answer": answer}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
+        save_to_excel(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
         return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
 
-# Funkce pro uložení do Excelu
+# Funkce pro uložení do Excelu na GitHub
 def save_to_excel(question, answer):
-    excel_path = 'chatbot_data.xlsx'  # Cesta k vašemu Excel souboru
-    
     try:
-        # Zkontrolujte, zda soubor existuje
-        if os.path.exists(excel_path):
-            df = pd.read_excel(excel_path)
-        else:
-            # Pokud neexistuje, vytvořte nový DataFrame
-            df = pd.DataFrame(columns=["Question", "Answer"])
-        
+        # Stáhnutí souboru z GitHubu
+        file = repo.get_contents(EXCEL_FILE_PATH)
+        content = file.decoded_content.decode("utf-8")
+
+        # Přečtěte existující data do DataFrame
+        from io import StringIO
+        df = pd.read_excel(StringIO(content))
+
         # Přidání nového záznamu
         new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
-        
-        # Použijte concat() pro přidání nového řádku
         df = pd.concat([df, new_row], ignore_index=True)
 
-        # Uložení DataFrame zpět do Excelu
-        df.to_excel(excel_path, index=False)
-        logging.info(f"✅ Úspěšně uloženo do Excelu: {excel_path}")
+        # Uložení do nového souboru
+        from io import BytesIO
+        with BytesIO() as output:
+            df.to_excel(output, index=False)
+            output.seek(0)
+            # Přejeďte soubor zpět na GitHub
+            repo.update_file(EXCEL_FILE_PATH, "Add new question and answer", output.read(), file.sha)
+
+        logging.info(f"✅ Úspěšně uloženo do Excelu na GitHub: {EXCEL_FILE_PATH}")
     except Exception as e:
-        logging.error(f"❌ Chyba při ukládání do Excelu: {str(e)}")
+        logging.error(f"❌ Chyba při ukládání do Excelu na GitHubu: {str(e)}")
