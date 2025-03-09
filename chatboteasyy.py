@@ -19,10 +19,10 @@ class RatingRequest(BaseModel):
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
 
-# Povolení CORS pro konkrétní domény
+# Povolení CORS pro konkrétní domény (povolení i pro HTTP a HTTPS)
 origins = [
-    "http://dotazy.wz.cz",  # Povolit požadavky z této domény
-    "https://dotazy.wz.cz",
+    "http://dotazy.wz.cz",  # Povolit požadavky z této domény (HTTP verze)
+    "https://dotazy.wz.cz",  # Povolit požadavky z této domény (HTTPS verze)
 ]
 
 app.add_middleware(
@@ -176,3 +176,4 @@ async def rate_answer(request: RatingRequest):
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání hodnocení: {e}")
         raise HTTPException(status_code=500, detail="Chyba při ukládání hodnocení.")
+
