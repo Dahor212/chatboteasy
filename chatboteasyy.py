@@ -3,11 +3,8 @@ from pydantic import BaseModel  # Importujeme BaseModel z Pydantic pro definici 
 import json
 import os
 import logging
-import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware
-from rapidfuzz import process, fuzz
-from github import Github
 import psycopg2
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
 app = FastAPI()
