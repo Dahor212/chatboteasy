@@ -10,7 +10,7 @@ app = FastAPI()
 
 # Povolení CORS pro konkrétní domény
 origins = [
-    "http://dotazy.wz.cz",
+    "http://dotazy.wz.cz",  # Ujisti se, že tohle je správné URL
     "https://dotazy.wz.cz",
 ]
 
@@ -80,8 +80,9 @@ def root():
 
 @app.get("/chatbot/")
 def chatbot(query: str):
-    # Tento endpoint bude hledat odpověď na základě dotazu
-    pass
+    # Tady by měla být logika pro vrácení odpovědi na základě dotazu
+    answer = "Toto je odpověď na váš dotaz: " + query
+    return {"answer": answer}
 
 # Funkce pro uložení dotazu a odpovědi do PostgreSQL
 def save_to_db(question, answer, rating='none'):
