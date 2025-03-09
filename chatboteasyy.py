@@ -99,7 +99,7 @@ def root():
 def chatbot(query: str):
     if not faq_data:
         logging.error("🚨 Databáze není načtena!")
-        return {"answer": "Chyba: Databáze není načtena."}
+        return {"answer": "Chyba: Databáze není načtena.", "paired_question": ""}
 
     # Logování dotazu
     logging.info(f"📥 Dotaz od uživatele: {query}")
@@ -120,11 +120,11 @@ def chatbot(query: str):
         # Uložení dotazu a odpovědi do databáze
         save_to_db(query, answer)
         
-        return {"answer": answer}
+        return {"answer": answer, "paired_question": best_match[0]}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
         save_to_db(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
-        return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
+        return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď.", "paired_question": ""}
 
 # Funkce pro uložení dotazu a odpovědi do PostgreSQL
 def save_to_db(question, answer, rating='none'):
