@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel  # Importujeme BaseModel z Pydantic pro definici požadavků
 import json
 import os
 import logging
 import psycopg2
 from fastapi.middleware.cors import CORSMiddleware
+from rapidfuzz import process, fuzz  # Zajistíme import knihovny rapidfuzz
 from datetime import datetime
 
 app = FastAPI()
