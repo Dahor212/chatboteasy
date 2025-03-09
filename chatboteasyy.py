@@ -167,7 +167,7 @@ async def rate_answer(request: RatingRequest):
         if conn:
             cursor = conn.cursor()
 
-            # Aktualizace ratingu pro daný záznam
+            # Pokud hodnocení neexistuje, nastavíme jej
             cursor.execute('''
                 UPDATE chatbot_logs
                 SET rating = %s
