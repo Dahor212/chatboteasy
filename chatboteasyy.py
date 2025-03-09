@@ -7,7 +7,6 @@ import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 from github import Github
-from io import BytesIO, StringIO
 import psycopg2
 from datetime import datetime
 
@@ -22,9 +21,9 @@ class RatingRequest(BaseModel):
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
 
-# Povolení CORS
+# Povolení CORS pro konkrétní domény
 origins = [
-    "http://dotazy.wz.cz",
+    "http://dotazy.wz.cz",  # Povolit požadavky z této domény
     "https://dotazy.wz.cz",
 ]
 
