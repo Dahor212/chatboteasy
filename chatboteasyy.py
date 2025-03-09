@@ -155,6 +155,8 @@ def save_to_db(question, answer, rating='none'):
             cursor.close()
             conn.close()
             logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
+        else:
+            logging.error("❌ Chyba při připojení k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání do databáze: {e}")
 
@@ -162,7 +164,9 @@ def save_to_db(question, answer, rating='none'):
 @app.post("/rate_answer")
 async def rate_answer(request: RatingRequest):
     try:
+        # Logování přijatých dat pro hodnocení
         logging.info(f"📥 Přijatý požadavek na hodnocení: {request}")
+
         # Připojení k databázi
         conn = connect_db()
         if conn:
@@ -179,8 +183,10 @@ async def rate_answer(request: RatingRequest):
             cursor.close()
             conn.close()
 
+            logging.info(f"✅ Hodnocení pro ID {request.answer_id} aktualizováno na {request.rating}.")
             return {"success": True}
         else:
+            logging.error("❌ Chyba při připojení k databázi.")
             raise HTTPException(status_code=500, detail="Chyba při připojení k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání hodnocení: {e}")
