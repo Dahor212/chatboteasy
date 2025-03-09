@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import json
 import os
 import logging
@@ -83,13 +83,14 @@ def create_table():
                     id SERIAL PRIMARY KEY,
                     question TEXT NOT NULL,
                     answer TEXT NOT NULL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    rating VARCHAR(10) DEFAULT 'none'  -- nový sloupec pro hodnocení
                 );
             ''')
             conn.commit()
             cursor.close()
             conn.close()
-            logging.info("✅ Tabulka byla úspěšně vytvořena.")
+            logging.info("✅ Tabulka byla úspěšně vytvořena nebo upravena.")
         except Exception as e:
             logging.error(f"❌ Chyba při vytváření tabulky: {e}")
             conn.close()
@@ -135,18 +136,45 @@ def chatbot(query: str):
         return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
 
 # Funkce pro uložení dotazu a odpovědi do PostgreSQL
-def save_to_db(question, answer):
+def save_to_db(question, answer, rating='none'):
     try:
         conn = connect_db()
         if conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO chatbot_logs (question, answer)
-                VALUES (%s, %s)
-            ''', (question, answer))
+                INSERT INTO chatbot_logs (question, answer, rating)
+                VALUES (%s, %s, %s)
+            ''', (question, answer, rating))
             conn.commit()
             cursor.close()
             conn.close()
             logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání do databáze: {e}")
+
+# Funkce pro aktualizaci hodnocení odpovědi
+@app.post("/rate_answer")
+async def rate_answer(request: RatingRequest):
+    try:
+        # Připojení k databázi
+        conn = connect_db()
+        if conn:
+            cursor = conn.cursor()
+
+            # Aktualizace ratingu pro daný záznam
+            cursor.execute('''
+                UPDATE chatbot_logs
+                SET rating = %s
+                WHERE id = %s
+            ''', (request.rating, request.answer_id))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            return {"success": True}
+        else:
+            raise HTTPException(status_code=500, detail="Chyba při připojení k databázi.")
+    except Exception as e:
+        logging.error(f"❌ Chyba při ukládání hodnocení: {e}")
+        raise HTTPException(status_code=500, detail="Chyba při ukládání hodnocení.")
