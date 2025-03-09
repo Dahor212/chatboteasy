@@ -30,10 +30,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # Povolení specifikovaných domén
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Povolit všechny HTTP metody
+    allow_headers=["*"],  # Povolit všechny hlavičky
 )
 
 # GitHub API token a repo informace (token načítáme z environmentální proměnné)
