@@ -155,8 +155,6 @@ def save_to_db(question, answer, rating='none'):
             cursor.close()
             conn.close()
             logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
-        else:
-            logging.error("❌ Chyba při připojení k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání do databáze: {e}")
 
