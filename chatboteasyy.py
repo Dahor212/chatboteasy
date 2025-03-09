@@ -33,6 +33,21 @@ app.add_middleware(
     allow_headers=["*"],  # Povolit všechny hlavičky
 )
 
+# Cesta k JSON souboru (pro Render)
+json_path = "Chatbot_zdroj.json"
+faq_data = []
+if os.path.exists(json_path):
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            faq_data = json.load(f)
+        logging.info(f"✅ Načteno {len(faq_data)} záznamů z JSON souboru.")
+    except Exception as e:
+        logging.error(f"❌ Chyba při načítání JSON souboru: {str(e)}")
+else:
+    logging.error(f"⚠️ Chyba: Soubor {json_path} nebyl nalezen!")
+
+questions = [item["question"] for item in faq_data] if faq_data else []
+
 # Připojení k PostgreSQL databázi
 def connect_db():
     try:
@@ -82,25 +97,67 @@ def root():
 
 @app.get("/chatbot/")
 def chatbot(query: str):
-    logging.info(f"📥 Dotaz od uživatele: {query}")
-    # Zde by měla být logika pro vyhledání odpovědi v FAQ
-    return {"answer": "Tato funkce ještě není implementována."}
+    if not faq_data:
+        logging.error("🚨 Databáze není načtena!")
+        return {"answer": "Chyba: Databáze není načtena."}
 
-@app.post("/rate_answer/")
+    # Logování dotazu
+    logging.info(f"📥 Dotaz od uživatele: {query}")
+
+    # Vyhledání nejlepší shody
+    best_match = process.extractOne(query, questions, scorer=fuzz.ratio)
+
+    if best_match:
+        logging.info(f"✅ Nejlepší shoda: {best_match[0]} (skóre: {best_match[1]})")
+    else:
+        logging.info("❌ Nenalezena žádná shoda.")
+
+    if best_match and best_match[1] > 76:  # Snížený práh pro shodu
+        index = questions.index(best_match[0])
+        answer = faq_data[index]["answer"]
+        logging.info(f"📤 Vrácená odpověď: {answer}")
+        
+        # Uložení dotazu a odpovědi do databáze
+        save_to_db(query, answer)
+        
+        return {"answer": answer}
+    else:
+        logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
+        save_to_db(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
+        return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
+
+# Funkce pro uložení dotazu a odpovědi do PostgreSQL
+def save_to_db(question, answer, rating='none'):
+    try:
+        conn = connect_db()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO chatbot_logs (question, answer, rating)
+                VALUES (%s, %s, %s)
+            ''', (question, answer, rating))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
+        else:
+            logging.error("❌ Nelze se připojit k databázi.")
+    except Exception as e:
+        logging.error(f"❌ Chyba při ukládání do databáze: {e}")
+
+# Funkce pro aktualizaci hodnocení odpovědi
+@app.post("/rate_answer")
 async def rate_answer(request: RatingRequest):
     try:
+        # Logování přijatých dat pro hodnocení
         logging.info(f"📥 Přijatý požadavek na hodnocení: {request}")
-        
+
         # Připojení k databázi
         conn = connect_db()
         if conn:
             cursor = conn.cursor()
-            
-            # Kontrola, zda je hodnocení platné
-            if request.rating not in ['up', 'down', 'none']:
-                raise HTTPException(status_code=400, detail="Neplatné hodnocení.")
-            
-            # Aktualizace hodnocení pro daný záznam
+
+            # Pokud hodnocení neexistuje, nastavíme jej
             cursor.execute('''
                 UPDATE chatbot_logs
                 SET rating = %s
@@ -114,7 +171,7 @@ async def rate_answer(request: RatingRequest):
             logging.info(f"✅ Hodnocení pro ID {request.answer_id} aktualizováno na {request.rating}.")
             return {"success": True}
         else:
-            logging.error("❌ Nelze se připojit k databázi.")
+            logging.error("❌ Chyba při připojení k databázi.")
             raise HTTPException(status_code=500, detail="Chyba při připojení k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání hodnocení: {e}")
