@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import logging
@@ -7,20 +6,6 @@ import psycopg2
 from datetime import datetime
 
 app = FastAPI()
-
-# Povolení CORS pro konkrétní domény
-origins = [
-    "http://dotazy.wz.cz",  # Ujisti se, že tohle je správné URL
-    "https://dotazy.wz.cz",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,  # Povolení specifikovaných domén
-    allow_credentials=True,
-    allow_methods=["*"],  # Povolit všechny HTTP metody
-    allow_headers=["*"],  # Povolit všechny hlavičky
-)
 
 # Třída pro přijetí hodnocení
 class RatingRequest(BaseModel):
@@ -80,9 +65,8 @@ def root():
 
 @app.get("/chatbot/")
 def chatbot(query: str):
-    # Tady by měla být logika pro vrácení odpovědi na základě dotazu
-    answer = "Toto je odpověď na váš dotaz: " + query
-    return {"answer": answer}
+    # Toto je ukázkový kód pro získání odpovědi, toto není součástí změn
+    pass
 
 # Funkce pro uložení dotazu a odpovědi do PostgreSQL
 def save_to_db(question, answer, rating='none'):
