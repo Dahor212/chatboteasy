@@ -162,6 +162,7 @@ def save_to_db(question, answer, rating='none'):
 @app.post("/rate_answer")
 async def rate_answer(request: RatingRequest):
     try:
+        logging.info(f"📥 Přijatý požadavek na hodnocení: {request}")
         # Připojení k databázi
         conn = connect_db()
         if conn:
