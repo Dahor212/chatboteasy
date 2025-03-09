@@ -7,6 +7,7 @@ import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 from github import Github
+from io import BytesIO, StringIO
 import psycopg2
 from datetime import datetime
 
@@ -21,7 +22,7 @@ class RatingRequest(BaseModel):
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
 
-# Povolení CORS pro konkrétní domény
+# Povolení CORS
 origins = [
     "http://dotazy.wz.cz",
     "https://dotazy.wz.cz",
@@ -34,6 +35,33 @@ app.add_middleware(
     allow_methods=["*"],  # Povolit všechny HTTP metody
     allow_headers=["*"],  # Povolit všechny hlavičky
 )
+
+# GitHub API token a repo informace (token načítáme z environmentální proměnné)
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token načtený z prostředí
+REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
+CSV_FILE_PATH = 'chat_data.csv'  # Cesta k souboru na GitHubu (bez URL, pouze cesta k souboru v repozitáři)
+
+# Nastavení připojení k GitHubu
+g = Github(GITHUB_TOKEN)
+repo = g.get_repo(REPO_NAME)
+
+# Logujeme připojení k repozitáři
+logging.info(f"📦 Připojeno k repozitáři: {REPO_NAME}")
+
+# Cesta k JSON souboru (pro Render)
+json_path = "Chatbot_zdroj.json"
+faq_data = []
+if os.path.exists(json_path):
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            faq_data = json.load(f)
+        logging.info(f"✅ Načteno {len(faq_data)} záznamů z JSON souboru.")
+    except Exception as e:
+        logging.error(f"❌ Chyba při načítání JSON souboru: {str(e)}")
+else:
+    logging.error(f"⚠️ Chyba: Soubor {json_path} nebyl nalezen!")
+
+questions = [item["question"] for item in faq_data] if faq_data else []
 
 # Připojení k PostgreSQL databázi
 def connect_db():
