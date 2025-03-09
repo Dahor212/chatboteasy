@@ -32,18 +32,6 @@ app.add_middleware(
     allow_headers=["*"],  # Povolit všechny hlavičky
 )
 
-# GitHub API token a repo informace (token načítáme z environmentální proměnné)
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token načtený z prostředí
-REPO_NAME = 'Dahor212/chatboteasy'  # GitHub repozitář
-CSV_FILE_PATH = 'chat_data.csv'  # Cesta k souboru na GitHubu (bez URL, pouze cesta k souboru v repozitáři)
-
-# Nastavení připojení k GitHubu
-g = Github(GITHUB_TOKEN)
-repo = g.get_repo(REPO_NAME)
-
-# Logujeme připojení k repozitáři
-logging.info(f"📦 Připojeno k repozitáři: {REPO_NAME}")
-
 # Cesta k JSON souboru (pro Render)
 json_path = "Chatbot_zdroj.json"
 faq_data = []
@@ -114,19 +102,23 @@ def chatbot(query: str):
 
     # Logování dotazu
     logging.info(f"📥 Dotaz od uživatele: {query}")
+    print(f"📥 Dotaz od uživatele: {query}")  # Debugovací print
 
     # Vyhledání nejlepší shody
     best_match = process.extractOne(query, questions, scorer=fuzz.ratio)
 
     if best_match:
         logging.info(f"✅ Nejlepší shoda: {best_match[0]} (skóre: {best_match[1]})")
+        print(f"✅ Nejlepší shoda: {best_match[0]} (skóre: {best_match[1]})")  # Debugovací print
     else:
         logging.info("❌ Nenalezena žádná shoda.")
+        print("❌ Nenalezena žádná shoda.")  # Debugovací print
 
     if best_match and best_match[1] > 76:  # Snížený práh pro shodu
         index = questions.index(best_match[0])
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
+        print(f"📤 Vrácená odpověď: {answer}")  # Debugovací print
         
         # Uložení dotazu a odpovědi do databáze
         save_to_db(query, answer)
@@ -134,12 +126,14 @@ def chatbot(query: str):
         return {"answer": answer}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
+        print(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")  # Debugovací print
         save_to_db(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
         return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
 
 # Funkce pro uložení dotazu a odpovědi do PostgreSQL
 def save_to_db(question, answer, rating='none'):
     try:
+        print(f"📤 Ukládám do databáze: {question} -> {answer} | Hodnocení: {rating}")  # Debugovací print
         conn = connect_db()
         if conn:
             cursor = conn.cursor()
@@ -151,8 +145,11 @@ def save_to_db(question, answer, rating='none'):
             cursor.close()
             conn.close()
             logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
+        else:
+            logging.error("❌ Nelze se připojit k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání do databáze: {e}")
+        print(f"❌ Chyba při ukládání do databáze: {e}")  # Debugovací print
 
 # Funkce pro aktualizaci hodnocení odpovědi
 @app.post("/rate_answer")
@@ -160,6 +157,7 @@ async def rate_answer(request: RatingRequest):
     try:
         # Logování přijatých dat pro hodnocení
         logging.info(f"📥 Přijatý požadavek na hodnocení: {request}")
+        print(f"📥 Přijatý požadavek na hodnocení: {request}")  # Debugovací print
 
         # Připojení k databázi
         conn = connect_db()
@@ -178,10 +176,12 @@ async def rate_answer(request: RatingRequest):
             conn.close()
 
             logging.info(f"✅ Hodnocení pro ID {request.answer_id} aktualizováno na {request.rating}.")
+            print(f"✅ Hodnocení pro ID {request.answer_id} aktualizováno na {request.rating}.")  # Debugovací print
             return {"success": True}
         else:
             logging.error("❌ Chyba při připojení k databázi.")
             raise HTTPException(status_code=500, detail="Chyba při připojení k databázi.")
     except Exception as e:
         logging.error(f"❌ Chyba při ukládání hodnocení: {e}")
+        print(f"❌ Chyba při ukládání hodnocení: {e}")  # Debugovací print
         raise HTTPException(status_code=500, detail="Chyba při ukládání hodnocení.")
