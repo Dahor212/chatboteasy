@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel  # Importujeme BaseModel z Pydantic pro definici požadavků
 import json
 import os
 import logging
@@ -11,6 +12,11 @@ import psycopg2
 from datetime import datetime
 
 app = FastAPI()
+
+# Třída pro přijetí hodnocení
+class RatingRequest(BaseModel):
+    answer_id: int  # ID odpovědi, která byla hodnocena
+    rating: str     # Hodnocení (up, down nebo none)
 
 # Nastavení logování
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
