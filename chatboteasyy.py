@@ -22,7 +22,7 @@ class RatingRequest(BaseModel):
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
 
-# Povolení CORS
+# Povolení CORS pro konkrétní domény
 origins = [
     "http://dotazy.wz.cz",
     "https://dotazy.wz.cz",
