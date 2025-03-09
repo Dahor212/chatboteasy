@@ -4,3 +4,4 @@ rapidfuzz
 pandas
 openpyxl
 PyGithub
+psycopg2
