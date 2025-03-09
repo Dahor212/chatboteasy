@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel  # Importujeme BaseModel z Pydantic pro definici požadavků
+from pydantic import BaseModel
 import json
 import os
 import logging
@@ -19,10 +19,10 @@ class RatingRequest(BaseModel):
 logging.basicConfig(filename="logs.txt", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logging.info("🚀 Spuštění aplikace")
 
-# Povolení CORS pro konkrétní domény (povolení jak pro HTTP, tak pro HTTPS)
+# Povolení CORS pro všechny metody
 origins = [
-    "http://dotazy.wz.cz",  # Povolit požadavky z této domény (HTTP verze)
-    "https://dotazy.wz.cz",  # Povolit požadavky z této domény (HTTPS verze)
+    "http://dotazy.wz.cz",  # Povolit požadavky z HTTP domény
+    "https://dotazy.wz.cz",  # Povolit požadavky z HTTPS domény
 ]
 
 app.add_middleware(
