@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from rapidfuzz import process, fuzz
 from github import Github
 from io import BytesIO, StringIO
+import psycopg2
+from datetime import datetime
 
 app = FastAPI()
 
@@ -55,9 +57,47 @@ else:
 
 questions = [item["question"] for item in faq_data] if faq_data else []
 
+# Připojení k PostgreSQL databázi
+def connect_db():
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT'),
+            dbname=os.getenv('DB_NAME'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD')
+        )
+        return conn
+    except Exception as e:
+        logging.error(f"❌ Chyba při připojení k databázi: {e}")
+        return None
+
+# Vytvoření tabulky v PostgreSQL, pokud neexistuje
+def create_table():
+    conn = connect_db()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS chatbot_logs (
+                    id SERIAL PRIMARY KEY,
+                    question TEXT NOT NULL,
+                    answer TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            ''')
+            conn.commit()
+            cursor.close()
+            conn.close()
+            logging.info("✅ Tabulka byla úspěšně vytvořena.")
+        except Exception as e:
+            logging.error(f"❌ Chyba při vytváření tabulky: {e}")
+            conn.close()
+
 @app.on_event("startup")
 def startup_event():
     logging.info("🌐 Server běží...")
+    create_table()
 
 @app.get("/")
 def root():
@@ -85,41 +125,28 @@ def chatbot(query: str):
         answer = faq_data[index]["answer"]
         logging.info(f"📤 Vrácená odpověď: {answer}")
         
-        # Uložení dotazu a odpovědi do CSV na GitHub
-        save_to_csv(query, answer)
+        # Uložení dotazu a odpovědi do databáze
+        save_to_db(query, answer)
         
         return {"answer": answer}
     else:
         logging.info(f"⚠️ Dotaz '{query}' má skóre {best_match[1] if best_match else 'N/A'} a nevrací odpověď.")
-        save_to_csv(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
+        save_to_db(query, "Omlouvám se, ale na tuto otázku nemám odpověď.")
         return {"answer": "Omlouvám se, ale na tuto otázku nemám odpověď."}
 
-# Funkce pro uložení do CSV na GitHub
-def save_to_csv(question, answer):
+# Funkce pro uložení dotazu a odpovědi do PostgreSQL
+def save_to_db(question, answer):
     try:
-        # Log pro začátek pokusu o získání souboru z GitHubu
-        logging.info(f"📝 Pokus o načtení souboru CSV z GitHubu: {CSV_FILE_PATH}")
-        
-        # Stáhnutí souboru z GitHubu
-        file = repo.get_contents(CSV_FILE_PATH)
-        content = file.decoded_content.decode("utf-8")
-
-        logging.info("✅ CSV soubor úspěšně načten.")
-
-        # Přečtěte existující data do DataFrame
-        df = pd.read_csv(StringIO(content))
-
-        # Přidání nového záznamu
-        new_row = pd.DataFrame({"Question": [question], "Answer": [answer]})
-        df = pd.concat([df, new_row], ignore_index=True)
-
-        # Uložení do nového souboru
-        with BytesIO() as output:
-            df.to_csv(output, index=False, sep=',', header=True)  # Ujistíme se, že používáme čárky jako oddělovače
-            output.seek(0)
-            repo.update_file(CSV_FILE_PATH, "Add new question and answer", output.read(), file.sha)
-
-        logging.info(f"✅ Úspěšně uloženo do CSV na GitHub: {CSV_FILE_PATH}")
+        conn = connect_db()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO chatbot_logs (question, answer)
+                VALUES (%s, %s)
+            ''', (question, answer))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            logging.info(f"✅ Úspěšně uloženo do databáze: {question} -> {answer}")
     except Exception as e:
-        logging.error(f"❌ Chyba při ukládání do CSV na GitHubu: {str(e)}")
-        logging.debug(f"🔍 Detailní chybová zpráva: {e}")
+        logging.error(f"❌ Chyba při ukládání do databáze: {e}")
